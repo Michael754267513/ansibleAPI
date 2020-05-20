@@ -114,8 +114,9 @@ class AnsibleBase(object):
         ansible_ssh_pass = password or "dev"
         if iskey:
             for host in targetHost:
-                self.hostsFile.write(b'%s ansible_ssh_user=%s ansible_port=%s\r\n' % (
-                host, ansible_ssh_user,  port))
+                line = %s ansible_ssh_user=%s ansible_port=%s\r\n' % (
+                host, ansible_ssh_user,  port)
+                self.hostsFile.write(bytes(line,"utf-8"))
         else:
             for host in targetHost:
                 line = '%s ansible_ssh_user=%s ansible_ssh_pass=%s ansible_port=%s \r\n' % (
