@@ -13,7 +13,7 @@ from ansible.executor.playbook_executor import PlaybookExecutor
 
 
 class ResultCallback(CallbackBase):
-
+     # 回调日志
     def __init__(self):
         self.result_json = []
         self.run_host_ok = []
@@ -82,7 +82,7 @@ class ResultCallback(CallbackBase):
 
 class AnsibleBase(object):
 
-    def __init__(self, targetHost):
+    def __init__(self, targetHost,iskey=False,username=False,password=False,port=22):
         self.Options = namedtuple('Options',
                              ['connection', 'module_path', 'forks', 'become', 'become_method', 'become_user', 'check',
                               'diff', 'listhosts', 'listtasks', 'listtags', 'syntax', 'tags', 'skip_tags'])
@@ -110,10 +110,17 @@ class AnsibleBase(object):
         self.results_callback = ResultCallback()
         self.hostsFile = NamedTemporaryFile(delete=False)
         # 指定用户名密码
-        ansible_ssh_user = 'username'
-        ansible_ssh_pass = 'password'
-        for host in targetHost:
-            self.hostsFile.write('%s ansible_ssh_user=%s ansible_ssh_pass=%s\r\n' % (host,ansible_ssh_user,ansible_ssh_pass))
+        ansible_ssh_user = username or "dev"
+        ansible_ssh_pass = password or "dev"
+        if iskey:
+            for host in targetHost:
+                self.hostsFile.write(b'%s ansible_ssh_user=%s ansible_port=%s\r\n' % (
+                host, ansible_ssh_user,  port))
+        else:
+            for host in targetHost:
+                line = '%s ansible_ssh_user=%s ansible_ssh_pass=%s ansible_port=%s \r\n' % (
+                host, ansible_ssh_user, ansible_ssh_pass, port)
+                self.hostsFile.write(bytes(line,"utf-8"))
         # self.hostsFile.write(targetHost)
         self.hostsFile.close()
         self.inventory = InventoryManager(loader=self.loader, sources=self.hostsFile.name)
@@ -156,7 +163,7 @@ class AnsibleBase(object):
 
     def ansiblePlayBook(self, playbook_path, tags=[], skip_tags=[], forks=10, become_user='root', become_method='sudo', extra_vars={},become=False):
         self.options = self.Options(connection='smart',
-                                    module_path=['/usr/lib/python2.7/site-packages/ansible/modules'],
+                                    module_path=['/opt/python3-env/env/lib/python3.8/site-packages/ansible/modules/'],
                                     forks=forks,
                                     become=become,
                                     become_method=become_method,
@@ -181,8 +188,9 @@ class AnsibleBase(object):
                 options=self.options,
                 passwords=self.passwords,
             )
-            # pb._tqm._stdout_callback = self.results_callback
+            pb._tqm._stdout_callback = self.results_callback
             result = pb.run()
+            return result
         finally:
             self.remove_tempfile()
 
